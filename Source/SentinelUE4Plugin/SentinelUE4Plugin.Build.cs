@@ -27,7 +27,8 @@ public class SentinelUE4Plugin : ModuleRules
 			{
 				"Core",
                 "Json",
-                "JsonUtilities"
+                "JsonUtilities",
+                "UnrealEd"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
