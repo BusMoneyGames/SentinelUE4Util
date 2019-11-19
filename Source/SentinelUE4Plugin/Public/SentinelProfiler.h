@@ -25,22 +25,30 @@ public:
 	USentinelProfiler();
 
 	UFUNCTION(BlueprintCallable, Category = "Profiling")
-	void SaveGPUData(FString TestName);
+	void CaptureGPUData(FString TestID);
 
-	void SaveTextureData(FString TestName);
+	void ScreenshotViewmode(FString viewmode);
+	void SaveTextureData();
 	FString GetTestOutputString();
 
 	FOutputDeviceFile* OutputOverride;
 
 	APlayerController* OwningPlayerController;
-	int TestNameIterator = 0;
+	int testIterator = 0;
 	int profileGPUFrameCounter = 0;
+	bool should_gpu_capture = false;
 
 	FString profileGPUSettings = "r.profileGPU.showUI 0 | r.ProfileGPU.PrintAssetSummary 1 | r.ShowMaterialDrawEvents 1 | r.ProfileGPU.PrintAssetSummary 1";
 	FString profileGPUCommand = "profileGPU";
 	FName LogRHICategory = "LogRHI";
+	FString TestName;
 
 	const FString& SentinelRelativePath = FPaths::ProjectSavedDir() + "SentinelOutput/";
+
+	TArray<FString> viewmodes;
+	bool should_capture_viewmodes = false;
+	int viewmode_index = 0;
+	FString last_frame_viewmode = "";
 
 protected:
 	// Called when the game starts

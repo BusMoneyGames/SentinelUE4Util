@@ -19,6 +19,10 @@ void USentinelProfiler::BeginPlay()
 	Super::BeginPlay();
 
 	OwningPlayerController = Cast<APlayerController>(GetOwner());
+
+	viewmodes.Add("ShowFlag.LightMapDensity");
+	viewmodes.Add("ShowFlag.ShaderComplexity");
+	viewmodes.Add("ShowFlag.LODColoration");
 	
 	// ...
 	UE_LOG(LogTemp, Warning, TEXT("Starting console command trigger"));
@@ -31,11 +35,30 @@ void USentinelProfiler::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (profileGPUFrameCounter == 5 && OutputOverride) {
+	if (should_gpu_capture && profileGPUFrameCounter == 5 && OutputOverride) {
 		OutputOverride->TearDown();
+		should_gpu_capture = false;
+
+		should_capture_viewmodes = true;
 	}
 	else { 
 		profileGPUFrameCounter++;
+	}
+
+	if (should_capture_viewmodes && viewmodes.Num() > viewmode_index) {
+
+		OwningPlayerController->ConsoleCommand(last_frame_viewmode + " 0");
+		OwningPlayerController->ConsoleCommand(viewmodes[viewmode_index] + " 1");
+
+		ScreenshotViewmode(viewmodes[viewmode_index]);
+		last_frame_viewmode = viewmodes[viewmode_index];
+
+		viewmode_index++;
+	}
+	else {
+		OwningPlayerController->ConsoleCommand(last_frame_viewmode + " 0");
+		viewmode_index = 0;
+		should_capture_viewmodes = false;
 	}
 }
 
@@ -43,12 +66,22 @@ FString USentinelProfiler::GetTestOutputString() {
 
 	// TODO Make this function handle not overwriting test results
 
-	return IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*SentinelRelativePath);
+	// TODO Make the string combine platform safe
+	FString path = SentinelRelativePath + "/" + FString::FromInt(testIterator) + "_" + TestName + "/";
+	return IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*path);
 }
 
-void USentinelProfiler::SaveTextureData(FString TestName = "DefaultTest") {
+void USentinelProfiler::ScreenshotViewmode(FString viewmode) {
+
+	// Take screenshot
+	FScreenshotRequest::RequestScreenshot(*GetTestOutputString() + viewmode + ".png", false, false);
+
+}
+
+void USentinelProfiler::SaveTextureData() {
+
 	// Create output device and add the include filter for the category we want
-	FString LogOutput = GetTestOutputString() + TestName + "_texture.log";
+	FString LogOutput = GetTestOutputString() + "Texture_Data.log";
 
 	FOutputDeviceFile* TextureOutputDevice = new FOutputDeviceFile(*LogOutput, true);;
 
@@ -60,13 +93,15 @@ void USentinelProfiler::SaveTextureData(FString TestName = "DefaultTest") {
 	// Send console commands
 	OwningPlayerController->ConsoleCommand("listtextures");
 
-	TestNameIterator = TestNameIterator + 1;
-
 	GLog->RemoveOutputDevice(TextureOutputDevice);
+	TextureOutputDevice->TearDown();
 }
 
-void USentinelProfiler::SaveGPUData(FString TestName="DefaultTest")
+void USentinelProfiler::CaptureGPUData(FString TestID="DefaultTest")
 {
+	TestName = TestID;
+	should_gpu_capture = true;
+
 	/*
 	r.ProfileGPU.AssetSummaryCallOuts
 	r.ProfileGPU.Pattern
@@ -74,10 +109,10 @@ void USentinelProfiler::SaveGPUData(FString TestName="DefaultTest")
 
 	*/
 	// Saving the texture data
-	SaveTextureData(TestName);
-
+	SaveTextureData();
+	
 	// Create output device and add the include filter for the category we want
-	FString LogOutput = GetTestOutputString() + TestName + "_gpu.log";
+	FString LogOutput = GetTestOutputString() + "GPU_Data.log";
 
 	OutputOverride = new FOutputDeviceFile(*LogOutput, true);
 	OutputOverride->IncludeCategory(LogRHICategory);
@@ -88,14 +123,11 @@ void USentinelProfiler::SaveGPUData(FString TestName="DefaultTest")
 	// Send console commands
 	OwningPlayerController->ConsoleCommand(profileGPUSettings);
 	OwningPlayerController->ConsoleCommand(profileGPUCommand);
-	
-	// Take screenshot
-	FScreenshotRequest::RequestScreenshot(*GetTestOutputString() + TestName + ".png", false, false);
 
 	// Reset the frame counter to turn off the log capture after a fixed number of frames
 	profileGPUFrameCounter = 0;
 
-	TestNameIterator = TestNameIterator + 1;
+	testIterator = testIterator + 1;
 
 }
 
