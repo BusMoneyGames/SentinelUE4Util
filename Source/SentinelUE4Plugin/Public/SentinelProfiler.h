@@ -33,6 +33,8 @@ public:
 
 	FOutputDeviceFile* OutputOverride;
 
+	bool isProfiling = false;
+
 	APlayerController* OwningPlayerController;
 	int testIterator = 0;
 	int profileGPUFrameCounter = 0;

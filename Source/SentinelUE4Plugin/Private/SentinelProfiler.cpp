@@ -59,6 +59,7 @@ void USentinelProfiler::TickComponent(float DeltaTime, ELevelTick TickType, FAct
 		OwningPlayerController->ConsoleCommand(last_frame_viewmode + " 0");
 		viewmode_index = 0;
 		should_capture_viewmodes = false;
+		isProfiling = false;
 	}
 }
 
@@ -101,6 +102,7 @@ void USentinelProfiler::CaptureGPUData(FString TestID="DefaultTest")
 {
 	TestName = TestID;
 	should_gpu_capture = true;
+	isProfiling = true;
 
 	/*
 	r.ProfileGPU.AssetSummaryCallOuts
@@ -108,6 +110,7 @@ void USentinelProfiler::CaptureGPUData(FString TestID="DefaultTest")
 	r.ProfileGPU.PrintAssetSummary
 
 	*/
+
 	// Saving the texture data
 	SaveTextureData();
 	
