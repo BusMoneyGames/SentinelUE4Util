@@ -1,6 +1,7 @@
 #include "CoreMinimal.h"
 #include "Tests/AutomationCommon.h"
 #include "SentinelProfiler.h"
+#include "SentinelTestPosition.h"
 #include "Engine.h"
 #include "EngineUtils.h"
 #include "Misc/AutomationTest.h"
@@ -27,6 +28,7 @@ static void Exit()
 	}
 }
 
+
 DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FSentinelProfilingCommand, FString, Command);
 bool FSentinelProfilingCommand::Update()
 {
@@ -41,28 +43,52 @@ bool FSentinelProfilingCommand::Update()
 
 	if (!profiler_component->isProfiling)
 	{
-		profiler_component->CaptureGPUData("Code_Test");
+		profiler_component->CaptureGPUData(Command);
 	}
 
 	return profiler_component->isProfiling;
 }
 
-
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSentinelAutomationCommandlet, "Sentinel.Test", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-bool FSentinelAutomationCommandlet::RunTest(const FString& Parameters)
+DEFINE_LATENT_AUTOMATION_COMMAND(FMoveToNextTestLocation);
+bool FMoveToNextTestLocation::Update()
 {
-	AutomationOpenMap(TEXT("/Game/Maps/Map_Grassland01"));
-	
-	ADD_LATENT_AUTOMATION_COMMAND(FEngineWaitLatentCommand(10.0f));
-	ADD_LATENT_AUTOMATION_COMMAND(FSentinelProfilingCommand(""));
-	
 	UWorld* world = GetTestWorld();
 
-	APlayerController* PController = world->GetFirstPlayerController();
-	//ADD_LATENT_AUTOMATION_COMMAND(FExecStringLatentCommand(TEXT("exit")));
+	for (TActorIterator<ASentinelTestPosition> ActorItr(world); ActorItr; ++ActorItr)
+	{
+		ASentinelTestPosition* test_actor = Cast<ASentinelTestPosition>(*ActorItr);
+		if (test_actor)
+		{
+			if (APlayerController* TargetPC = UGameplayStatics::GetPlayerController(world, 0))
+			{
+				TargetPC->GetPawn()->SetActorLocation(test_actor->GetActorLocation());
+			}
+		}
+	}
 
-	// FGenericPlatformMisc::RequestExit(false);
-	ADD_LATENT_AUTOMATION_COMMAND(FEngineWaitLatentCommand(5));
+	return true;
+}
+
+
+IMPLEMENT_COMPLEX_AUTOMATION_TEST(FSentinelAutomationCommandlet, "Sentinel.Test", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+void FSentinelAutomationCommandlet::GetTests(TArray<FString>& OutBeautifiedNames, TArray <FString>& OutTestCommands) const
+{
+
+	OutBeautifiedNames.Add("Name1");
+	OutTestCommands.Add("Command");
+}
+
+bool FSentinelAutomationCommandlet::RunTest(const FString& Parameters)
+{
+	AutomationOpenMap(TEXT("/Game/Medieval_Armory/Maps/Demo_01"));
+	
+	ADD_LATENT_AUTOMATION_COMMAND(FEngineWaitLatentCommand(1.0f));
+	ADD_LATENT_AUTOMATION_COMMAND(FMoveToNextTestLocation);
+
+	ADD_LATENT_AUTOMATION_COMMAND(FEngineWaitLatentCommand(1.0f));
+	ADD_LATENT_AUTOMATION_COMMAND(FSentinelProfilingCommand("Fun-Hardcoded"));
+
+	ADD_LATENT_AUTOMATION_COMMAND(FEngineWaitLatentCommand(5.0f));
 
 	ADD_LATENT_AUTOMATION_COMMAND(FExitGameCommand);
 
@@ -84,7 +110,7 @@ void FNewEnemyCountTest::Define()
 	BeforeEach([this]()
 	{
 		// 3. Before each test we want to open a game map.
-		AutomationOpenMap(TEXT("/Game/Maps/Map_Grassland01"));
+		AutomationOpenMap(TEXT("/Game/Medieval_Armory/Maps/Demo_01"));
 
 		// 4. Before each test the World is obtained and tested if is valid.
 		World = GetTestWorld();
@@ -99,7 +125,7 @@ void FNewEnemyCountTest::Define()
 
 	LatentIt("should return available items", [this](const FDoneDelegate& Done)
 	{
-		// profiler_component->OnGPUCaptureFinished.Add(Done);
+		// profiler_component->OnGPUCaptureFinished.AddUnique();
 		
 		Done.Execute();
 		// BackendService->QueryItems(this, &FMyCustomSpec::HandleQueryItemComplete, Done);

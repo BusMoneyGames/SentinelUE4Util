@@ -19,7 +19,7 @@ void USentinelProfiler::BeginPlay()
 	OwningPlayerController = Cast<APlayerController>(GetOwner());
 
 	viewmodes.Add("ShowFlag.LightMapDensity");
-	viewmodes.Add("ShowFlag.ShaderComplexity");
+	//viewmodes.Add("ShowFlag.ShaderComplexity");
 	viewmodes.Add("ShowFlag.LODColoration");
 }
 
@@ -96,7 +96,7 @@ FString USentinelProfiler::GetTestOutputFolder() {
 void USentinelProfiler::TriggerScreenshot(FString viewmode) {
 
 	// Take screenshot
-	FScreenshotRequest::RequestScreenshot(*GetTestOutputFolder() + viewmode + ".png", false, false);
+	FScreenshotRequest::RequestScreenshot(*GetTestOutputFolder() + viewmode + ".png", false,false);
 }
 
 void USentinelProfiler::SaveTextureData() {
