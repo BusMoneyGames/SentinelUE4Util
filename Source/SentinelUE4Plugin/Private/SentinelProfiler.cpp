@@ -8,8 +8,6 @@ USentinelProfiler::USentinelProfiler()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-
-	// ...
 }
 
 
@@ -23,47 +21,70 @@ void USentinelProfiler::BeginPlay()
 	viewmodes.Add("ShowFlag.LightMapDensity");
 	viewmodes.Add("ShowFlag.ShaderComplexity");
 	viewmodes.Add("ShowFlag.LODColoration");
-	
-	// ...
-	UE_LOG(LogTemp, Warning, TEXT("Starting console command trigger"));
-
 }
-
 
 // Called every frame
 void USentinelProfiler::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (should_gpu_capture && profileGPUFrameCounter == 5 && OutputOverride) {
-		OutputOverride->TearDown();
-		should_gpu_capture = false;
-
-		should_capture_viewmodes = true;
-	}
-	else { 
+	// GPU Capture
+	if (should_gpu_capture && OutputOverride) 
+	{
 		profileGPUFrameCounter++;
+
+		if (profileGPUFrameCounter > 5)
+		{
+			OutputOverride->TearDown();	
+			GLog->RemoveOutputDevice(OutputOverride);
+			should_gpu_capture = false;
+			should_capture_viewmodes = true;
+		}
+	
+		return;
 	}
 
-	if (should_capture_viewmodes && viewmodes.Num() > viewmode_index) {
+	// View modes capture
+	if (should_capture_viewmodes) {
 
-		OwningPlayerController->ConsoleCommand(last_frame_viewmode + " 0");
-		OwningPlayerController->ConsoleCommand(viewmodes[viewmode_index] + " 1");
+		DisableLastViewmode();
+		SetNextViewmode();
+		TriggerScreenshot(viewmodes[viewmode_index]);
 
-		ScreenshotViewmode(viewmodes[viewmode_index]);
 		last_frame_viewmode = viewmodes[viewmode_index];
-
 		viewmode_index++;
 	}
-	else {
-		OwningPlayerController->ConsoleCommand(last_frame_viewmode + " 0");
-		viewmode_index = 0;
-		should_capture_viewmodes = false;
-		isProfiling = false;
+
+	if (viewmode_index >= viewmodes.Num())
+	{
+		FinishProfiling();
 	}
 }
+void USentinelProfiler::FinishProfiling()
+{
+	DisableLastViewmode();
 
-FString USentinelProfiler::GetTestOutputString() {
+	viewmode_index = 0;
+	should_capture_viewmodes = false;
+	isProfiling = false;
+	profileGPUFrameCounter = 0;
+
+	OnGPUCaptureFinished.Broadcast();
+
+}
+
+void USentinelProfiler::SetNextViewmode() 
+{
+	OwningPlayerController->ConsoleCommand(viewmodes[viewmode_index] + " 1");
+}
+
+void USentinelProfiler::DisableLastViewmode() 
+{
+
+	OwningPlayerController->ConsoleCommand(last_frame_viewmode + " 0");
+}
+
+FString USentinelProfiler::GetTestOutputFolder() {
 
 	// TODO Make this function handle not overwriting test results
 
@@ -72,17 +93,16 @@ FString USentinelProfiler::GetTestOutputString() {
 	return IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*path);
 }
 
-void USentinelProfiler::ScreenshotViewmode(FString viewmode) {
+void USentinelProfiler::TriggerScreenshot(FString viewmode) {
 
 	// Take screenshot
-	FScreenshotRequest::RequestScreenshot(*GetTestOutputString() + viewmode + ".png", false, false);
-
+	FScreenshotRequest::RequestScreenshot(*GetTestOutputFolder() + viewmode + ".png", false, false);
 }
 
 void USentinelProfiler::SaveTextureData() {
 
 	// Create output device and add the include filter for the category we want
-	FString LogOutput = GetTestOutputString() + "Texture_Data.log";
+	FString LogOutput = GetTestOutputFolder() + "Texture_Data.log";
 
 	FOutputDeviceFile* TextureOutputDevice = new FOutputDeviceFile(*LogOutput, true);;
 
@@ -100,6 +120,8 @@ void USentinelProfiler::SaveTextureData() {
 
 void USentinelProfiler::CaptureGPUData(FString TestID="DefaultTest")
 {
+	testIterator = testIterator + 1;
+
 	TestName = TestID;
 	should_gpu_capture = true;
 	isProfiling = true;
@@ -115,7 +137,7 @@ void USentinelProfiler::CaptureGPUData(FString TestID="DefaultTest")
 	SaveTextureData();
 	
 	// Create output device and add the include filter for the category we want
-	FString LogOutput = GetTestOutputString() + "GPU_Data.log";
+	FString LogOutput = GetTestOutputFolder() + "GPU_Data.log";
 
 	OutputOverride = new FOutputDeviceFile(*LogOutput, true);
 	OutputOverride->IncludeCategory(LogRHICategory);
@@ -129,8 +151,6 @@ void USentinelProfiler::CaptureGPUData(FString TestID="DefaultTest")
 
 	// Reset the frame counter to turn off the log capture after a fixed number of frames
 	profileGPUFrameCounter = 0;
-
-	testIterator = testIterator + 1;
 
 }
 

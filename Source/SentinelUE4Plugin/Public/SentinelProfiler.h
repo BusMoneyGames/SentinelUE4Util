@@ -15,7 +15,9 @@
 #include "HAL/FileManager.h"
 #include "SentinelProfiler.generated.h"
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGPUCaptureFinishedDelegate);
+
+UCLASS()
 class SENTINELUE4PLUGIN_API USentinelProfiler : public UActorComponent
 {
 	GENERATED_BODY()
@@ -27,30 +29,34 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Profiling")
 	void CaptureGPUData(FString TestID);
 
-	void ScreenshotViewmode(FString viewmode);
+	void TriggerScreenshot(FString viewmode);
 	void SaveTextureData();
-	FString GetTestOutputString();
+	void DisableLastViewmode();
+	void SetNextViewmode();
+	void FinishProfiling();
 
+	FString GetTestOutputFolder();
+
+	APlayerController* OwningPlayerController;
 	FOutputDeviceFile* OutputOverride;
 
 	bool isProfiling = false;
-
-	APlayerController* OwningPlayerController;
 	int testIterator = 0;
 	int profileGPUFrameCounter = 0;
+	int number_of_frames_to_capture = 5;
 	bool should_gpu_capture = false;
 
-	FString profileGPUSettings = "r.profileGPU.showUI 0 | r.ProfileGPU.PrintAssetSummary 1 | r.ShowMaterialDrawEvents 1 | r.ProfileGPU.PrintAssetSummary 1";
-	FString profileGPUCommand = "profileGPU";
-	FName LogRHICategory = "LogRHI";
 	FString TestName;
-
-	const FString& SentinelRelativePath = FPaths::ProjectSavedDir() + "SentinelOutput/";
-
 	TArray<FString> viewmodes;
+	const FString& SentinelRelativePath = FPaths::ProjectSavedDir() + "SentinelOutput/";
 	bool should_capture_viewmodes = false;
 	int viewmode_index = 0;
 	FString last_frame_viewmode = "";
+	FString profileGPUSettings = "r.profileGPU.showUI 0 | r.ProfileGPU.PrintAssetSummary 1 | r.ShowMaterialDrawEvents 1 | r.ProfileGPU.PrintAssetSummary 1";
+	FString profileGPUCommand = "profileGPU";
+	FName LogRHICategory = "LogRHI";
+
+	FGPUCaptureFinishedDelegate OnGPUCaptureFinished;
 
 protected:
 	// Called when the game starts
