@@ -115,13 +115,15 @@ void FNewEnemyCountTest::Define()
 		World = GetTestWorld();
 		PController = World->GetFirstPlayerController();
 
+		FString MapName = World->GetMapName();
+		
 		TArray<USentinelPCComponent*> profilerComps;
 		PController->GetComponents(profilerComps);
-		profiler_component = profilerComps[0];
+		// profiler_component = profilerComps[0];
 
 		TestNotNull("Check if World is properly created", World);
 	});
-
+	/*
 	LatentIt("should return available items", [this](const FDoneDelegate& Done)
 	{
 		// profiler_component->OnGPUCaptureFinished.AddUnique();
@@ -129,18 +131,12 @@ void FNewEnemyCountTest::Define()
 		Done.Execute();
 		// BackendService->QueryItems(this, &FMyCustomSpec::HandleQueryItemComplete, Done);
 	});
-	// 5. It - defines one test.
+	*/
+	
 	It("Capture First", [this]()
 	{
 		// 7. Test if there are 3 enemy characters.
-		profiler_component->CaptureGPUData("Fudge");
+		// profiler_component->CaptureGPUData("Fudge");
 		TestTrue("Check if there are 3 enemies on the level", true);
-	});
-
-	// 8. AfterEach - defines what happens after every test.
-	AfterEach([this]()
-	{
-		// 9. After each test close game map.
-		Exit();
 	});
 }
