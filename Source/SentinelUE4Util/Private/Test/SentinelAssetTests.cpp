@@ -33,6 +33,7 @@ static void Trigger()
 	UE_LOG(LogTemp, Warning, TEXT("Trigger Baby!"));
 
 }
+
 USentinelPCComponent* GetSentinelProfilingComponent() 
 {
 	// find the player controller in the loaded world
@@ -75,24 +76,22 @@ void FSentinelTest::Define()
 	});
 	LatentIt("Run Latent Test", [this](const FDoneDelegate& Done)
 	{
-		AsyncTask(ENamedThreads::GameThread, [this, Done]()
-		{
-			// Fetch reference to the game object that I want to interact with
-			USentinelPCComponent* profilingComponent = GetSentinelProfilingComponent();
 
-			// Binding to "finished" event on the game object
+		// Fetch reference to the game object that I want to interact with
+		USentinelPCComponent* profilingComponent = GetSentinelProfilingComponent();
 
-				// profilingComponent->onCaptureFinished -> something something
+		// Binding to "finished" event on the game object
 
-			// Logic that needs to trigger when the onCaptureFinished event is triggered
+			// profilingComponent->onCaptureFinished -> something something
 
-				// Done.Execute();
-				// Exit();
+		// Logic that needs to trigger when the onCaptureFinished event is triggered
 
-			// Trigger the behavior that takes a few frames to finish
-			profilingComponent->CaptureGPUData("AutomationTest");
+			// Done.Execute();
+			// Exit();
 
-		});
+		// Trigger the behavior that takes a few frames to finish
+		profilingComponent->CaptureGPUData("AutomationTest");
+
 	});
 
 	
