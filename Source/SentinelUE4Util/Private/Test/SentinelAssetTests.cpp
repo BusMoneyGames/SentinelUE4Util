@@ -28,6 +28,11 @@ static void Exit()
 	}
 }
 
+static void Trigger() 
+{
+	UE_LOG(LogTemp, Warning, TEXT("Trigger Baby!"));
+
+}
 USentinelPCComponent* GetSentinelProfilingComponent() 
 {
 	// find the player controller in the loaded world
@@ -57,12 +62,9 @@ USentinelPCComponent* GetSentinelProfilingComponent()
 
 // 1. We define the test with BEGIN_DEFINE_SPEC and END_DEFINE_SPEC macros. 
 //    Everything between these two macros is a variable shared between implemented tests.
-BEGIN_DEFINE_SPEC(FNewEnemyCountTest, "Sentinel.New", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-UWorld* World;
-APlayerController* PController;
-USentinelPCComponent* profiler_component;
-END_DEFINE_SPEC(FNewEnemyCountTest)
-void FNewEnemyCountTest::Define()
+BEGIN_DEFINE_SPEC(FSentinelTest, "Sentinel.New", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+END_DEFINE_SPEC(FSentinelTest)
+void FSentinelTest::Define()
 {
 	BeforeEach([this]()
 	{
@@ -70,31 +72,25 @@ void FNewEnemyCountTest::Define()
 
 		AutomationOpenMap(TEXT("/Game/Medieval_Armory/Maps/Demo_01"));
 
-		/*
-		// 4. Before each test the World is obtained and tested if is valid.
-		World = GetTestWorld();
-		PController = World->GetFirstPlayerController();
-
-		FString MapName = World->GetMapName();
-		
-		TArray<USentinelPCComponent*> profilerComps;
-		PController->GetComponents(profilerComps);
-		//profiler_component = profilerComps[0];
-
-		TestNotNull("Check if World is properly created", World);
-		*/
-
 	});
 	LatentIt("Run Latent Test", [this](const FDoneDelegate& Done)
 	{
-
-	// 2. Because latent test runs on a separate thread we have to ensure that game logic tests run on a Game Thread. 
 		AsyncTask(ENamedThreads::GameThread, [this, Done]()
 		{
-			USentinelPCComponent* comp = GetSentinelProfilingComponent();
+			// Fetch reference to the game object that I want to interact with
+			USentinelPCComponent* profilingComponent = GetSentinelProfilingComponent();
 
-			Done.Execute();
-			Exit();
+			// Binding to "finished" event on the game object
+
+				// profilingComponent->onCaptureFinished -> something something
+
+			// Logic that needs to trigger when the onCaptureFinished event is triggered
+
+				// Done.Execute();
+				// Exit();
+
+			// Trigger the behavior that takes a few frames to finish
+			profilingComponent->CaptureGPUData("AutomationTest");
 
 		});
 	});
