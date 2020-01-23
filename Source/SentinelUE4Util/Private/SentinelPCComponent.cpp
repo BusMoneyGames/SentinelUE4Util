@@ -62,6 +62,7 @@ void USentinelPCComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 		FinishProfiling();
 	}
 }
+
 void USentinelPCComponent::FinishProfiling()
 {
 	DisableLastViewmode();
@@ -71,7 +72,7 @@ void USentinelPCComponent::FinishProfiling()
 	isProfiling = false;
 	profileGPUFrameCounter = 0;
 
-	OnGPUCaptureFinished.Broadcast();
+	onCaptureFinished.Broadcast();
 
 }
 

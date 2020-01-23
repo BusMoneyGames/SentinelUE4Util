@@ -5,6 +5,15 @@
 #include "Engine.h"
 #include "EngineUtils.h"
 #include "Misc/AutomationTest.h"
+#include "AssetRegistryModule.h"
+
+void GetMapPackages() {
+	// 1. Get the array of assets from Maps directory.
+	FAssetRegistryModule& ARM = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	TArray<FAssetData> AssetDataArray;
+	
+	ARM.Get().GetAssetsByPath(TEXT("/Game/FirstPersonCPP/Maps"), AssetDataArray);
+}
 
 UWorld* GetTestWorld() {
 	const TIndirectArray<FWorldContext>& WorldContexts = GEngine->GetWorldContexts();
@@ -30,43 +39,67 @@ static void Exit()
 
 
 // Everything between these two macros is a variable shared between implemented tests.
-BEGIN_DEFINE_SPEC(FNewEnemyCountTest, "Sentinel.AutomationPoints", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+BEGIN_DEFINE_SPEC(FSentinelAutomationPointsTest, "Sentinel.AutomationPoints", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 UWorld* World;
 APlayerController* PController;
 USentinelProfiler* profileComponent;
 TArray<USentinelProfiler*> profilerComps;
-bool shouldLoadMap = true;
-END_DEFINE_SPEC(FNewEnemyCountTest)
+END_DEFINE_SPEC(FSentinelAutomationPointsTest)
 
-void FNewEnemyCountTest::Define()
+
+void FSentinelAutomationPointsTest::Define()
 {
-	BeforeEach([this]()
+	Describe("Levels", [this]()
 	{
-		if (shouldLoadMap) 
+		for (int32 Index = 0; Index < 5; Index++)
 		{
-			AutomationOpenMap(TEXT("/Game/Medieval_Armory/Maps/Demo_01"));
-			shouldLoadMap = false;
+			It(FString::Printf(TEXT("should resolve %d + %d = %d"), Index, 2, Index + 2), [this, Index]()
+			{
+				TestEqual(FString::Printf(TEXT("%d + %d = %d"), Index, 2, Index + 2), Index + 2, Index + 2);
+			});
 		}
+	});
+
+	LatentBeforeEach([this](const FDoneDelegate TestDone)
+	{
+
+		AutomationOpenMap(TEXT("/Game/Medieval_Armory/Maps/Demo_01"));
 
 		World = GetTestWorld();
 		PController = World->GetFirstPlayerController();
+
 		TestNotNull("Check if World is properly created", World);
 		TestNotNull("Check if Player Controller is found", PController);
 
-		if (!profileComponent) 
-		{
-			PController->GetComponents(profilerComps);			
-			TestTrue("Check if profiling component is found on player controller", profilerComps.IsValidIndex(0));
-			profileComponent = profilerComps[0];
-		}
+		PController->GetComponents(profilerComps);			
+		TestTrue("Check if profiling component is found on player controller", profilerComps.IsValidIndex(0));
+		profileComponent = profilerComps[0];
+
+		// Grace period to stream in textures and finish loading the level
+		FPlatformProcess::Sleep(2.0f);
+		TestDone.Execute();
 
 	});
 
-	It("Do Profiling For Points", [this]()
+	LatentAfterEach([this](const FDoneDelegate TestDone) {
+		
+		Exit();
+		TestDone.Execute();
+	});
+
+	LatentIt("Capture All the things", EAsyncExecution::ThreadPool, [this](const FDoneDelegate TestDone)
 	{
-		// 7. Test if there are 3 enemy characters.
-		profileComponent->CaptureGPUData("Fudge");
+		AsyncTask(ENamedThreads::GameThread, [this]()
+		{
+			profileComponent->CaptureGPUData("Latent Baby");
+		
+		});
+		// Allow the test to run 
+		// TODO hook this up to the event delegate in the profile component
 
-		TestFalse("Check if there are 3 enemies on the level", false);
+		FPlatformProcess::Sleep(5.0f);
+
+		TestDone.Execute();
 	});
+
 }

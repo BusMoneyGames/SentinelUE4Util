@@ -28,72 +28,32 @@ static void Exit()
 	}
 }
 
-DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FSentinelProfilingCommand, FString, Command);
-bool FSentinelProfilingCommand::Update()
+USentinelPCComponent* GetSentinelProfilingComponent() 
 {
-	UWorld* world = GetTestWorld();
+	// find the player controller in the loaded world
+	APlayerController* PlayerController = GetTestWorld()->GetFirstPlayerController();
 
-	APlayerController* PController = world->GetFirstPlayerController();
-
-	TArray<USentinelPCComponent*> profilerComps;
-	PController->GetComponents(profilerComps);
-
-	USentinelPCComponent* profiler_component = profilerComps[0];
-
-	if (!profiler_component->isProfiling)
-	{
-		profiler_component->CaptureGPUData(Command);
-	}
-
-	return profiler_component->isProfiling;
-}
-
-DEFINE_LATENT_AUTOMATION_COMMAND(FMoveToNextTestLocation);
-bool FMoveToNextTestLocation::Update()
-{
-	UWorld* world = GetTestWorld();
-
-	for (TActorIterator<ASentinelTestLocation> ActorItr(world); ActorItr; ++ActorItr)
-	{
-		ASentinelTestLocation* test_actor = Cast<ASentinelTestLocation>(*ActorItr);
-		if (test_actor)
-		{
-			if (APlayerController* TargetPC = UGameplayStatics::GetPlayerController(world, 0))
-			{
-				TargetPC->GetPawn()->SetActorLocation(test_actor->GetActorLocation());
-			}
-		}
-	}
-
-	return true;
-}
-
-
-IMPLEMENT_COMPLEX_AUTOMATION_TEST(FSentinelAutomationCommandlet, "Sentinel.Test", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-void FSentinelAutomationCommandlet::GetTests(TArray<FString>& OutBeautifiedNames, TArray <FString>& OutTestCommands) const
-{
-
-	OutBeautifiedNames.Add("Name1");
-	OutTestCommands.Add("Command");
-}
-
-bool FSentinelAutomationCommandlet::RunTest(const FString& Parameters)
-{
-	AutomationOpenMap(TEXT("/Game/Medieval_Armory/Maps/Demo_01"));
+	TArray<USentinelPCComponent*> profilerComponents;
+	PlayerController->GetComponents<USentinelPCComponent>(profilerComponents);
 	
-	ADD_LATENT_AUTOMATION_COMMAND(FEngineWaitLatentCommand(1.0f));
-	ADD_LATENT_AUTOMATION_COMMAND(FMoveToNextTestLocation);
+	//TArray<USentinelPCComponent*> profilerComponents = PlayerController->GetComponentsByClass(USentinelPCComponent::StaticClass());
 
-	ADD_LATENT_AUTOMATION_COMMAND(FEngineWaitLatentCommand(1.0f));
-	ADD_LATENT_AUTOMATION_COMMAND(FSentinelProfilingCommand("Fun-Hardcoded"));
+	UE_LOG(LogTemp, Warning, TEXT("Found %d profiling components"), profilerComponents.Num());
 
-	ADD_LATENT_AUTOMATION_COMMAND(FEngineWaitLatentCommand(5.0f));
+	if (profilerComponents.Num() == 1)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Found component!"));
+		// There only should ever be one component so we return that one
 
-	ADD_LATENT_AUTOMATION_COMMAND(FExitGameCommand);
+		return profilerComponents[0];
+	}
+	else 
+	{
+		UE_LOG(LogTemp, Warning, TEXT("No component found"));;
+		return NULL;
+	}
 
-    return true;
 }
-
 
 // 1. We define the test with BEGIN_DEFINE_SPEC and END_DEFINE_SPEC macros. 
 //    Everything between these two macros is a variable shared between implemented tests.
@@ -102,15 +62,15 @@ UWorld* World;
 APlayerController* PController;
 USentinelPCComponent* profiler_component;
 END_DEFINE_SPEC(FNewEnemyCountTest)
-
 void FNewEnemyCountTest::Define()
 {
-	// 2. BeforeEach - defines what happens before each test.
 	BeforeEach([this]()
 	{
-		// 3. Before each test we want to open a game map.
+		// FPlatformProcess::Sleep(10.0f);
+
 		AutomationOpenMap(TEXT("/Game/Medieval_Armory/Maps/Demo_01"));
 
+		/*
 		// 4. Before each test the World is obtained and tested if is valid.
 		World = GetTestWorld();
 		PController = World->GetFirstPlayerController();
@@ -119,19 +79,26 @@ void FNewEnemyCountTest::Define()
 		
 		TArray<USentinelPCComponent*> profilerComps;
 		PController->GetComponents(profilerComps);
-		// profiler_component = profilerComps[0];
+		//profiler_component = profilerComps[0];
 
 		TestNotNull("Check if World is properly created", World);
+		*/
+
 	});
-	/*
-	LatentIt("should return available items", [this](const FDoneDelegate& Done)
+	LatentIt("Run Latent Test", [this](const FDoneDelegate& Done)
 	{
-		// profiler_component->OnGPUCaptureFinished.AddUnique();
-		
-		Done.Execute();
-		// BackendService->QueryItems(this, &FMyCustomSpec::HandleQueryItemComplete, Done);
+
+	// 2. Because latent test runs on a separate thread we have to ensure that game logic tests run on a Game Thread. 
+		AsyncTask(ENamedThreads::GameThread, [this, Done]()
+		{
+			USentinelPCComponent* comp = GetSentinelProfilingComponent();
+
+			Done.Execute();
+			Exit();
+
+		});
 	});
-	*/
+
 	
 	It("Capture First", [this]()
 	{

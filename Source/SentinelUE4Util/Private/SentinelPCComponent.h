@@ -59,7 +59,8 @@ public:
 	FString profileGPUCommand = "profileGPU";
 	FName LogRHICategory = "LogRHI";
 
-	FGPUCaptureFinishedDelegate OnGPUCaptureFinished;
+	UPROPERTY(BlueprintAssignable, BlueprintCallable)
+	FGPUCaptureFinishedDelegate onCaptureFinished;
 
 protected:
 	// Called when the game starts
