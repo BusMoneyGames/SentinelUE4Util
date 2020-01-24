@@ -74,11 +74,28 @@ void FSentinelTest::Define()
 		AutomationOpenMap(TEXT("/Game/Medieval_Armory/Maps/Demo_01"));
 
 	});
-	LatentIt("Run Latent Test", [this](const FDoneDelegate& Done)
+	LatentIt("Run Latent Test", ENamedThreads::GameThread, [this](const FDoneDelegate& Done)
 	{
 
-		// Fetch reference to the game object that I want to interact with
-		USentinelPCComponent* profilingComponent = GetSentinelProfilingComponent();
+			USentinelPCComponent* profilingComponent = GetSentinelProfilingComponent();
+			if (profilingComponent == nullptr)
+			{
+
+				Done.Execute();
+				UE_LOG(LogTemp, Warning, TEXT("No profiling component found"));
+
+				return;
+			}
+
+			profilingComponent->onCaptureFinished.BindLambda([Done]()
+			{
+				Done.Execute();
+				UE_LOG(LogTemp, Warning, TEXT("Finishing the test"));
+				Exit();
+			});
+
+			profilingComponent->CaptureGPUData("asdf");
+
 
 		// Binding to "finished" event on the game object
 
@@ -90,7 +107,9 @@ void FSentinelTest::Define()
 			// Exit();
 
 		// Trigger the behavior that takes a few frames to finish
-		profilingComponent->CaptureGPUData("AutomationTest");
+		// aprofilingComponent->CaptureGPUData("AutomationTest");
+
+		//
 
 	});
 

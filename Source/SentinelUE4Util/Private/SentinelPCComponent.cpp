@@ -72,7 +72,7 @@ void USentinelPCComponent::FinishProfiling()
 	isProfiling = false;
 	profileGPUFrameCounter = 0;
 
-	onCaptureFinished.Broadcast();
+	onCaptureFinished.Execute();
 
 }
 
@@ -123,6 +123,7 @@ void USentinelPCComponent::SaveTextureData() {
 
 void USentinelPCComponent::CaptureGPUData(FString TestID = "DefaultTest")
 {
+	FinishProfiling();
 	testIterator = testIterator + 1;
 
 	TestName = TestID;

@@ -13,10 +13,11 @@
 #include "Misc/Paths.h"
 #include "UnrealClient.h"
 #include "HAL/FileManager.h"
+#include "Misc/AutomationTest.h"
 #include "SentinelPCComponent.generated.h"
 
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGPUCaptureFinishedDelegate);
+DECLARE_DELEGATE(FGPUCaptureFinishedDelegate);
 
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -29,7 +30,7 @@ public:
 	USentinelPCComponent();
 
 
-	UFUNCTION(BlueprintCallable, Category = "Profiling")
+	UFUNCTION()
 	void CaptureGPUData(FString TestID);
 
 	void TriggerScreenshot(FString viewmode);
@@ -59,7 +60,6 @@ public:
 	FString profileGPUCommand = "profileGPU";
 	FName LogRHICategory = "LogRHI";
 
-	UPROPERTY(BlueprintAssignable, BlueprintCallable)
 	FGPUCaptureFinishedDelegate onCaptureFinished;
 
 protected:
