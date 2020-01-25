@@ -19,6 +19,7 @@ void USentinelPCComponent::BeginPlay()
 	Super::BeginPlay();
 
 	OwningPlayerController = Cast<APlayerController>(GetOwner());
+	viewmodes.Add("");
 
 	viewmodes.Add("ShowFlag.LightMapDensity");
 	//viewmodes.Add("ShowFlag.ShaderComplexity");
@@ -33,10 +34,13 @@ void USentinelPCComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 	// GPU Capture
 	if (should_gpu_capture && OutputOverride)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("STATE - capturing GPU"));
 		profileGPUFrameCounter++;
 
-		if (profileGPUFrameCounter > 5)
+		// Wait for 10ish seconds
+		if (profileGPUFrameCounter > 50)
 		{
+			UE_LOG(LogTemp, Warning, TEXT("COMMAND - Stop Capturing GPU"));
 			OutputOverride->TearDown();
 			GLog->RemoveOutputDevice(OutputOverride);
 			should_gpu_capture = false;
@@ -48,7 +52,7 @@ void USentinelPCComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 
 	// View modes capture
 	if (should_capture_viewmodes) {
-
+		UE_LOG(LogTemp, Warning, TEXT("STATE - capturing viewmodes"));
 		DisableLastViewmode();
 		SetNextViewmode();
 		TriggerScreenshot(viewmodes[viewmode_index]);
@@ -59,6 +63,7 @@ void USentinelPCComponent::TickComponent(float DeltaTime, ELevelTick TickType, F
 
 	if (viewmode_index >= viewmodes.Num())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("COMMAND - Finish profiling"));
 		FinishProfiling();
 	}
 }
@@ -72,8 +77,7 @@ void USentinelPCComponent::FinishProfiling()
 	isProfiling = false;
 	profileGPUFrameCounter = 0;
 
-	onCaptureFinished.Execute();
-
+	onCaptureFinished.ExecuteIfBound();
 }
 
 void USentinelPCComponent::SetNextViewmode()
@@ -123,7 +127,6 @@ void USentinelPCComponent::SaveTextureData() {
 
 void USentinelPCComponent::CaptureGPUData(FString TestID = "DefaultTest")
 {
-	FinishProfiling();
 	testIterator = testIterator + 1;
 
 	TestName = TestID;
@@ -156,5 +159,17 @@ void USentinelPCComponent::CaptureGPUData(FString TestID = "DefaultTest")
 	// Reset the frame counter to turn off the log capture after a fixed number of frames
 	profileGPUFrameCounter = 0;
 
+}
+
+void USentinelPCComponent::TriggerTestFromCode(FString TestID, FDoneDelegate Done)
+{
+	onCaptureFinished.BindLambda([Done]()
+	{
+		Done.Execute();
+		UE_LOG(LogTemp, Warning, TEXT("Finishing the test"));
+
+	});
+
+	CaptureGPUData(TestID);
 }
 

@@ -28,12 +28,6 @@ static void Exit()
 	}
 }
 
-static void Trigger() 
-{
-	UE_LOG(LogTemp, Warning, TEXT("Trigger Baby!"));
-
-}
-
 USentinelPCComponent* GetSentinelProfilingComponent() 
 {
 	// find the player controller in the loaded world
@@ -64,20 +58,25 @@ USentinelPCComponent* GetSentinelProfilingComponent()
 // 1. We define the test with BEGIN_DEFINE_SPEC and END_DEFINE_SPEC macros. 
 //    Everything between these two macros is a variable shared between implemented tests.
 BEGIN_DEFINE_SPEC(FSentinelTest, "Sentinel.New", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+USentinelPCComponent* profilingComponent;
+APlayerController* PlayerController;
 END_DEFINE_SPEC(FSentinelTest)
 void FSentinelTest::Define()
 {
 	BeforeEach([this]()
 	{
-		// FPlatformProcess::Sleep(10.0f);
-
+		
 		AutomationOpenMap(TEXT("/Game/Medieval_Armory/Maps/Demo_01"));
 
+		PlayerController = GetTestWorld()->GetFirstPlayerController();
+		PlayerController->ConsoleCommand(TEXT("r.SetRes 1920x1080f"), true);
+
+		profilingComponent = GetSentinelProfilingComponent();
 	});
-	LatentIt("Run Latent Test", ENamedThreads::GameThread, [this](const FDoneDelegate& Done)
+
+	LatentIt("Run Latent Test", [this](const FDoneDelegate& Done)
 	{
 
-			USentinelPCComponent* profilingComponent = GetSentinelProfilingComponent();
 			if (profilingComponent == nullptr)
 			{
 
@@ -86,38 +85,16 @@ void FSentinelTest::Define()
 
 				return;
 			}
-
-			profilingComponent->onCaptureFinished.BindLambda([Done]()
-			{
-				Done.Execute();
-				UE_LOG(LogTemp, Warning, TEXT("Finishing the test"));
-				Exit();
-			});
-
-			profilingComponent->CaptureGPUData("asdf");
-
-
-		// Binding to "finished" event on the game object
-
-			// profilingComponent->onCaptureFinished -> something something
-
-		// Logic that needs to trigger when the onCaptureFinished event is triggered
-
-			// Done.Execute();
-			// Exit();
-
-		// Trigger the behavior that takes a few frames to finish
-		// aprofilingComponent->CaptureGPUData("AutomationTest");
-
-		//
+			
+			profilingComponent->TriggerTestFromCode("TestName", Done);
 
 	});
 
-	
-	It("Capture First", [this]()
+	AfterEach([this]()
 	{
-		// 7. Test if there are 3 enemy characters.
-		// profiler_component->CaptureGPUData("Fudge");
-		TestTrue("Check if there are 3 enemies on the level", true);
+		Exit();
 	});
+
+
+
 }

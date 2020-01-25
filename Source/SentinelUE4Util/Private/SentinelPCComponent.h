@@ -18,7 +18,7 @@
 
 
 DECLARE_DELEGATE(FGPUCaptureFinishedDelegate);
-
+DECLARE_DELEGATE(FExitTestDelegate);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class SENTINELUE4UTIL_API USentinelPCComponent : public UActorComponent
@@ -32,6 +32,8 @@ public:
 
 	UFUNCTION()
 	void CaptureGPUData(FString TestID);
+	
+	void TriggerTestFromCode(FString TestID, FDoneDelegate Done);
 
 	void TriggerScreenshot(FString viewmode);
 	void SaveTextureData();
@@ -61,6 +63,7 @@ public:
 	FName LogRHICategory = "LogRHI";
 
 	FGPUCaptureFinishedDelegate onCaptureFinished;
+	FExitTestDelegate onTestFinished;
 
 protected:
 	// Called when the game starts
